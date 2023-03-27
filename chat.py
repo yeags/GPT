@@ -4,17 +4,6 @@ import openai
 import os
 import threading
 
-# with open('engines.txt', 'w') as file:
-#     engines = openai.Engine.list()
-#     for i in engines['data']:
-#         file.write(i['id'] + '\n')
-
-# with open('models.txt', 'w') as file:
-#     models = openai.Model.list()
-#     for i in models['data']:
-#         file.write(i['id'] + '\n')
-
-
 class ChatApp(tk.Tk):
     def __init__(self):
         super().__init__()
