@@ -11,15 +11,19 @@ class ChatApp(tk.Tk):
         self.geometry('800x600')
         self.resizable(0, 0)
         self.root = tk.Frame(self, bg='white')
+        self.frm_chat = tk.Frame(self.root, bg='white')
+        self.frm_input = tk.Frame(self.root, bg='white')
+        self.frm_command_bar = tk.Frame(self.root, bg='white')
         self.root.grid(row=0, column=0, sticky='nsew')
+        self.frm_chat.grid(row=0, column=0)
+        self.frm_input.grid(row=1, column=0, sticky='ew')
+        self.frm_input.columnconfigure(1, weight=1)
+        self.frm_command_bar.grid(row=2, column=0, sticky='ew')
         # self.iconbitmap('chatbot.ico')
         self.configure(bg='white')
         openai.api_key = os.environ.get('OPENAI_API_KEY')
-        openai.Model.retrieve('gpt-4')
 
         # Create the chat window
-        self.frm_chat = tk.Frame(self.root, bg='white')
-        self.frm_chat.grid(row=0, column=0)
         self.chat_window = tk.Text(self.frm_chat, bd=1, bg='white', font='Arial', wrap='word')
         self.chat_window.grid(row=0, column=0, sticky='nsew', padx=(6,0), pady=5)
 
@@ -28,10 +32,6 @@ class ChatApp(tk.Tk):
         self.chat_window['yscrollcommand'] = scrollbar.set
         scrollbar.grid(row=0, column=1, sticky='nse', padx=0, pady=5)
 
-        # Create the message input window
-        self.frm_input = tk.Frame(self.root, bg='white')
-        self.frm_input.grid(row=1, column=0, sticky='ew')
-        self.frm_input.columnconfigure(1, weight=1)
         # Create the send button
         send_button = tk.Button(self.frm_input, text='Send', font='Arial', width=10,
                                 bd=1, bg='white', activebackground='white', command=self.send)
@@ -44,6 +44,9 @@ class ChatApp(tk.Tk):
         # Create a busy animation to show when the bot is thinking
         self.busy = ttk.Progressbar(self.frm_input, orient='horizontal', length=100, mode='indeterminate')
         self.busy.grid(row=1, column=0, columnspan=2, sticky='ew', padx=6, pady=5)
+        # Create new chat button
+        btn_new_chat = tk.Button(self.frm_command_bar, text='New Chat', font='Arial', width=10, bg='white', command=self.reset_chat)
+        btn_new_chat.grid(row=2, column=0, padx=6, pady=5)
 
     def send(self):
         self.msg = self.txt_send.get()
@@ -71,6 +74,10 @@ class ChatApp(tk.Tk):
         self.busy.update()
         if self.busy['value'] < 100:
             self.after(10, self.step_progress_bar)
+    
+    def reset_chat(self):
+        self.chat_window.delete('1.0', 'end')
+        self.txt_send.focus_set()
 
 if __name__ == '__main__':
     app = ChatApp()
