@@ -22,6 +22,7 @@ class ChatApp(tk.Tk):
         # self.iconbitmap('chatbot.ico')
         self.configure(bg='white')
         openai.api_key = os.environ.get('OPENAI_API_KEY')
+        self.conversation = []
 
         # Create the chat window
         self.chat_window = tk.Text(self.frm_chat, bd=1, bg='white', font='Arial', wrap='word')
@@ -47,17 +48,30 @@ class ChatApp(tk.Tk):
         # Create new chat button
         btn_new_chat = tk.Button(self.frm_command_bar, text='New Chat', font='Arial', width=10, bg='white', command=self.reset_chat)
         btn_new_chat.grid(row=2, column=0, padx=6, pady=5)
+        # Create a save chat button
+        btn_save_chat = tk.Button(self.frm_command_bar, text='Save Chat', font='Arial', width=10, bg='white', command=self.save_chat)
+        btn_save_chat.grid(row=2, column=1, padx=6, pady=5)
+
+    def save_chat(self):
+        with open('chat.txt', 'w', encoding='utf-8') as f:
+            for message in self.conversation:
+                f.write(message['role'] + ': ' + message['content'] + '\n\n')
+        self.chat_window.insert('end', 'Chat saved to chat.txt\n\n')
 
     def send(self):
-        self.msg = self.txt_send.get()
+        user_input = self.txt_send.get()
+        self.conversation.append({'role': 'user', 'content': user_input})
         self.txt_send.delete(0, 'end')
-        self.chat_window.insert('end', 'User: ' + self.msg + '\n\n')
+        self.chat_window.insert('end', 'User: ' + user_input + '\n\n')
         self.busy.start()
         self.thread_send()
         self.thread_step_progress_bar()
 
     def send_msg(self):
-        response = openai.ChatCompletion.create(model='gpt-4-0314', messages=[{'role': 'user', 'content': self.msg}], max_tokens=4000, temperature=0.2)
+        response = openai.ChatCompletion.create(model='gpt-4',
+                                                messages=self.conversation,
+                                                temperature=0.2)
+        self.conversation.append({'role': 'assistant', 'content': response['choices'][0]['message']['content']})
         self.chat_window.insert('end', 'GPT: ' + response['choices'][0]['message']['content'] + '\n\n')
         self.busy.stop()
 
@@ -77,6 +91,7 @@ class ChatApp(tk.Tk):
     
     def reset_chat(self):
         self.chat_window.delete('1.0', 'end')
+        self.conversation = []
         self.txt_send.focus_set()
 
 if __name__ == '__main__':
