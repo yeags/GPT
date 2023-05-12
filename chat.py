@@ -4,6 +4,7 @@ import openai
 import os
 import threading
 from pathlib import Path
+from time import sleep
 
 class ChatApp(tk.Tk):
     def __init__(self):
@@ -28,6 +29,7 @@ class ChatApp(tk.Tk):
         openai.api_key = os.environ.get('OPENAI_API_KEY')
         self.conversation = []
         self.chat_folder = Path().cwd() / 'conversations'
+        self.event = threading.Event()
         self.list_saved_chats()
 
         # Create the chat window
@@ -85,15 +87,21 @@ class ChatApp(tk.Tk):
         self.lbox_saved_chats.delete('active')
 
     def save_chat(self):
-
-        with open('chat.txt', 'w', encoding='utf-8') as f:
+        title = self.generate_chat_title()
+        with open(self.chat_folder / (title + '.txt'), 'w', encoding='utf-8') as f:
             for message in self.conversation:
                 f.write(message['role'] + ': ' + message['content'] + '\n\n')
         self.chat_window.insert('end', 'Chat saved to chat.txt\n\n')
 
     def generate_chat_title(self):
         message = {'role': 'user', 'content': 'Generate a four word title for this conversation.  The title should be filename safe.'}
+        self.event.clear()
         self.thread_send(self.conversation+[message])
+        while not self.event.is_set():
+            print('waiting...')
+            sleep(1)
+        title = self.conversation.pop()['content']
+        return title
 
     def send(self):
         user_input = self.txt_send.get()
@@ -111,14 +119,16 @@ class ChatApp(tk.Tk):
         self.conversation.append({'role': 'assistant', 'content': response['choices'][0]['message']['content']})
         self.chat_window.insert('end', 'GPT: ' + response['choices'][0]['message']['content'] + '\n\n')
         self.busy.stop()
+        self.event.set()
 
     def thread_send(self, conversation):
-        thread = threading.Thread(target=self.send_msg, args=(conversation,))
-        thread.start()
+        self.send_thread = threading.Thread(target=self.send_msg, args=(conversation,))
+        self.send_thread.start()
+
     
     def thread_step_progress_bar(self):
-        thread = threading.Thread(target=self.step_progress_bar)
-        thread.start()
+        self.pb_thread = threading.Thread(target=self.step_progress_bar)
+        self.pb_thread.start()
 
     def step_progress_bar(self):
         self.busy.step(1)
