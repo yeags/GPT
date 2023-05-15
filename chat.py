@@ -29,7 +29,6 @@ class ChatApp(tk.Tk):
         openai.api_key = os.environ.get('OPENAI_API_KEY')
         self.conversation = []
         self.chat_folder = Path().cwd() / 'conversations'
-        self.event = threading.Event()
         self.list_saved_chats()
 
         # Create the chat window
@@ -91,13 +90,19 @@ class ChatApp(tk.Tk):
         with open(self.chat_folder / (title + '.txt'), 'w', encoding='utf-8') as f:
             for message in self.conversation:
                 f.write(message['role'] + ': ' + message['content'] + '\n\n')
-        self.chat_window.insert('end', 'Chat saved to chat.txt\n\n')
+        self.chat_window.insert('end', f'Chat saved to {title}.txt\n\n')
+        # update saved chats list
+        self.lbox_saved_chats.insert('end', title)
+        self.lbox_saved_chats.selection_clear(0, 'end')
+        self.lbox_saved_chats.selection_set('end')
+        self.lbox_saved_chats.activate('end')
+        self.lbox_saved_chats.see('end')
 
     def generate_chat_title(self):
         message = {'role': 'user', 'content': 'Generate a four word title for this conversation.  The title should be filename safe.'}
-        self.event.clear()
+        self.response = None
         self.thread_send(self.conversation+[message])
-        while not self.event.is_set():
+        while self.response is None:
             print('waiting...')
             sleep(1)
         title = self.conversation.pop()['content']
@@ -113,13 +118,12 @@ class ChatApp(tk.Tk):
         self.thread_step_progress_bar()
 
     def send_msg(self, conversation):
-        response = openai.ChatCompletion.create(model='gpt-4',
+        self.response = openai.ChatCompletion.create(model='gpt-4',
                                                 messages=conversation,
                                                 temperature=0.2)
-        self.conversation.append({'role': 'assistant', 'content': response['choices'][0]['message']['content']})
-        self.chat_window.insert('end', 'GPT: ' + response['choices'][0]['message']['content'] + '\n\n')
+        self.conversation.append({'role': 'assistant', 'content': self.response['choices'][0]['message']['content']})
+        self.chat_window.insert('end', 'GPT: ' + self.response['choices'][0]['message']['content'] + '\n\n')
         self.busy.stop()
-        self.event.set()
 
     def thread_send(self, conversation):
         self.send_thread = threading.Thread(target=self.send_msg, args=(conversation,))
